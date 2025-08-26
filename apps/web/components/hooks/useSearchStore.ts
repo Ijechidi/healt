@@ -1,140 +1,129 @@
 import { create } from 'zustand';
 import { hopitaux } from '../hopital/mockHotipal';
 import { specialities } from '../spacialites/mock';
+import { SearchService } from '../../lib/services/search.service';
+import { SearchFilters } from '../../lib/types';
+
+// Type compatible avec les données mock existantes
+type HopitalMock = {
+  id: string;
+  nom: string;
+  adresse: string;
+  description: string;
+  contact: string;
+  localisation: string;
+  slug: string;
+  specialites: string[];
+};
 
 interface SearchState {
   location: string;
   nom: string;
   speciality: string;
-  filteredHopitaux: typeof hopitaux;
+  filteredHopitaux: HopitalMock[];
+  searchResults: HopitalMock[];
+  isLoading: boolean;
+  hasActiveSearch: boolean;
   setLocation: (location: string) => void;
   setNom: (nom: string) => void;
   setSpeciality: (speciality: string) => void;
-  search: () => void;
+  search: () => Promise<void>;
   reset: () => void;
 }
+
+const searchService = new SearchService();
 
 export const useSearchStore = create<SearchState>((set, get) => ({
   location: '',
   nom: '',
   speciality: '',
-  filteredHopitaux: hopitaux, // Commencer avec tous les hôpitaux
+  filteredHopitaux: hopitaux,
+  searchResults: [],
+  isLoading: false,
+  hasActiveSearch: false,
 
   setLocation: (location: string) => {
     set({ location });
-    // Recherche automatique quand la localisation change
-    const state = get();
-    let filtered = [...hopitaux];
-    
-    if (location.trim()) {
-      filtered = filtered.filter(h => 
-        h.localisation.toLowerCase().includes(location.toLowerCase()) ||
-        h.adresse.toLowerCase().includes(location.toLowerCase())
-      );
+    // Auto-search quand il y a un changement
+    if (location.trim() || get().nom.trim() || get().speciality) {
+      get().search();
     }
-    
-    if (state.nom.trim()) {
-      filtered = filtered.filter(h => 
-        h.nom.toLowerCase().includes(state.nom.toLowerCase())
-      );
-    }
-    
-    if (state.speciality) {
-      filtered = filtered.filter(h => 
-        h.specialites.includes(state.speciality)
-      );
-    }
-    
-    set({ filteredHopitaux: filtered });
   },
 
   setNom: (nom: string) => {
     set({ nom });
-    // Recherche automatique quand le nom change
-    const state = get();
-    let filtered = [...hopitaux];
-    
-    if (state.location.trim()) {
-      filtered = filtered.filter(h => 
-        h.localisation.toLowerCase().includes(state.location.toLowerCase()) ||
-        h.adresse.toLowerCase().includes(state.location.toLowerCase())
-      );
+    // Auto-search quand il y a un changement
+    if (nom.trim() || get().location.trim() || get().speciality) {
+      get().search();
     }
-    
-    if (nom.trim()) {
-      filtered = filtered.filter(h => 
-        h.nom.toLowerCase().includes(nom.toLowerCase())
-      );
-    }
-    
-    if (state.speciality) {
-      filtered = filtered.filter(h => 
-        h.specialites.includes(state.speciality)
-      );
-    }
-    
-    set({ filteredHopitaux: filtered });
   },
 
   setSpeciality: (speciality: string) => {
     set({ speciality });
-    // Recherche automatique quand la spécialité change
-    const state = get();
-    let filtered = [...hopitaux];
-    
-    if (state.location.trim()) {
-      filtered = filtered.filter(h => 
-        h.localisation.toLowerCase().includes(state.location.toLowerCase()) ||
-        h.adresse.toLowerCase().includes(state.location.toLowerCase())
-      );
+    // Auto-search quand il y a un changement
+    if (speciality || get().location.trim() || get().nom.trim()) {
+      get().search();
     }
-    
-    if (state.nom.trim()) {
-      filtered = filtered.filter(h => 
-        h.nom.toLowerCase().includes(state.nom.toLowerCase())
-      );
-    }
-    
-    if (speciality) {
-      filtered = filtered.filter(h => 
-        h.specialites.includes(speciality)
-      );
-    }
-    
-    set({ filteredHopitaux: filtered });
   },
 
-  search: () => {
+  search: async () => {
     const { location, nom, speciality } = get();
     
-    let filtered = [...hopitaux];
-
-    // Filtrage par localisation
-    if (location.trim()) {
-      filtered = filtered.filter(h => 
-        h.localisation.toLowerCase().includes(location.toLowerCase()) ||
-        h.adresse.toLowerCase().includes(location.toLowerCase())
-      );
+    // Si aucun filtre n'est actif, réinitialiser
+    if (!location.trim() && !nom.trim() && !speciality) {
+      set({ 
+        filteredHopitaux: hopitaux, 
+        searchResults: [],
+        hasActiveSearch: false,
+        isLoading: false 
+      });
+      return;
     }
 
-    // Filtrage par nom d'hôpital
-    if (nom.trim()) {
-      filtered = filtered.filter(h => 
-        h.nom.toLowerCase().includes(nom.toLowerCase())
-      );
-    }
+    set({ isLoading: true, hasActiveSearch: true });
 
-    // Filtrage par spécialité
-    if (speciality) {
-      filtered = filtered.filter(h => 
-        h.specialites.includes(speciality)
-      );
-    }
+    try {
+      const filters: SearchFilters = {
+        location: location.trim() || undefined,
+        hopitalName: nom.trim() || undefined,
+        specialiteId: speciality || undefined
+      };
 
-    console.log('Filtres appliqués:', { location, nom, speciality });
-    console.log('Résultats filtrés:', filtered);
-    
-    set({ filteredHopitaux: filtered });
+      // Fallback vers le filtrage local pour le moment
+      let filtered = [...hopitaux];
+
+      if (location.trim()) {
+        filtered = filtered.filter(h => 
+          h.localisation?.toLowerCase().includes(location.toLowerCase()) ||
+          h.adresse.toLowerCase().includes(location.toLowerCase())
+        );
+      }
+
+      if (nom.trim()) {
+        filtered = filtered.filter(h => 
+          h.nom.toLowerCase().includes(nom.toLowerCase())
+        );
+      }
+
+      if (speciality) {
+        filtered = filtered.filter(h => 
+          h.specialites.includes(speciality)
+        );
+      }
+
+      set({ 
+        filteredHopitaux: filtered,
+        searchResults: filtered,
+        isLoading: false 
+      });
+
+      console.log('État de la recherche:', { location, nom, speciality, hasActiveSearch: true });
+      console.log('Hôpitaux filtrés:', filtered);
+      
+    } catch (error) {
+      console.error('Erreur de recherche:', error);
+      set({ isLoading: false });
+    }
   },
 
   reset: () => {
@@ -142,7 +131,10 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       location: '',
       nom: '',
       speciality: '',
-      filteredHopitaux: hopitaux // Remettre tous les hôpitaux
+      filteredHopitaux: hopitaux,
+      searchResults: [],
+      hasActiveSearch: false,
+      isLoading: false
     });
   }
 })); 

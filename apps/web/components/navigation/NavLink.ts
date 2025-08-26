@@ -9,12 +9,17 @@ export const navLinks: NavLink[] = [
   {
     id: 'home',
     label: 'Accueil',
-    href: '#home'
+    href: '/'
   },
   {
     id: 'find-doctor',
     label: 'Trouver un médecin',
     href: '#find-doctor'
+  },
+  {
+    id: 'appointment',
+    label: 'Rendez-vous',
+    href: '/appointment'
   },
   {
     id: 'services',
@@ -25,10 +30,5 @@ export const navLinks: NavLink[] = [
     id: 'about',
     label: 'À propos',
     href: '#about'
-  },
-  {
-    id: 'contact',
-    label: 'Contactez-nous',
-    href: '#contact'
   }
 ];

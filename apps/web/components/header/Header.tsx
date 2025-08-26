@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@repo/ui/components/button';
 import Nav from '../navigation/Nav';
 import { Heart } from 'lucide-react';
-
+import Link from 'next/link';
 
 interface HeaderProps {
   className?: string;
@@ -15,20 +15,26 @@ const Header: React.FC<HeaderProps> = ({ className = '' }) => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <div className="flex-shrink-0 flex justify-center items-center gap-2">
+            <Link href="/" className="flex-shrink-0 flex justify-center items-center gap-2">
               <span className="text-2xl font-bold text-primary">MedEasy </span> <Heart size={20} /> 
-            </div>
+            </Link>
           </div>
 
           {/* Navigation Links */}
-    
+          <Nav className="text-card" />
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
-                  <Nav className="text-card" />
-            <Button variant="default" size="sm">
-              Register
-            </Button>
+            <Link href="/appointment">
+              <Button variant="outline" size="sm">
+                Rendez-vous
+              </Button>
+            </Link>
+            <Link href="/auth">
+              <Button variant="default" size="sm">
+                Connexion
+              </Button>
+            </Link>
           </div>
         </div>
       </nav>
